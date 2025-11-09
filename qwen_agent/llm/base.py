@@ -189,11 +189,11 @@ class BaseChatModel(ABC):
         # Not precise. It's hard to estimate tokens related with function calling and multimodal items.
         max_input_tokens = generate_cfg.pop('max_input_tokens', DEFAULT_MAX_INPUT_TOKENS)
         if max_input_tokens > 0:
-            messages = _truncate_input_messages_roughly(
+            tokens, messages = _truncate_input_messages_roughly(
                 messages=messages,
                 max_tokens=max_input_tokens,
             )
-
+            self.tokens = tokens
         if functions:
             fncall_mode = True
         else:
@@ -777,9 +777,9 @@ def _truncate_input_messages_roughly(messages: List[Message], max_tokens: int) -
         indexed_messages_per_user[last_user_idx].append([msg_idx, msg])
 
     all_tokens = sum([x for x in message_tokens.values()])
-    logger.info(f'ALL tokens: {all_tokens}, Available tokens: {available_token}')
+    # logger.info(f'ALL tokens: {all_tokens}, Available tokens: {available_token}')
     if all_tokens <= available_token:
-        return messages
+        return all_tokens, messages
     if available_token <= 0:
         raise ModelServiceError(
             code='400',
@@ -801,7 +801,7 @@ def _truncate_input_messages_roughly(messages: List[Message], max_tokens: int) -
             if new_turn:
                 new_messages += new_turn
 
-    return new_messages
+    return all_tokens, new_messages
 
 
 def retry_model_service(

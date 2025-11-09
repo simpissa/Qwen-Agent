@@ -6,7 +6,7 @@ from parser import ReActParser
 
 import prettytable
 import tqdm
-from code_interpreter import code_interpreter
+from .code_interpreter import code_interpreter
 from config import get_model, get_react_parser, get_react_prompt, model_path_map
 from datasets import load_dataset
 from metrics.code_execution import eval_code_execution_rate

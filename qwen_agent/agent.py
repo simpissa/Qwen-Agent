@@ -68,12 +68,19 @@ class Agent(ABC):
         self.name = name
         self.description = description
 
-    def run_nonstream(self, messages: List[Union[Dict, Message]], **kwargs) -> Union[List[Message], List[Dict]]:
+        self.total_tool_calls = 0
+        self.tool_call_errors = 0
+        self.tokens = 0
+
+    def run_nonstream(self, messages: List[Union[Dict, Message]], **kwargs) -> Tuple[Tuple[int, int], Union[List[Message], List[Dict]]]:
         """Same as self.run, but with stream=False,
         meaning it returns the complete response directly
         instead of streaming the response incrementally."""
+        self.total_tool_calls = 0
+        self.tool_call_errors = 0
+        self.llm.tokens = 0
         *_, last_responses = self.run(messages, **kwargs)
-        return last_responses
+        return self.llm.tokens, self.total_tool_calls, self.tool_call_errors, last_responses
 
     def run(self, messages: List[Union[Dict, Message]],
             **kwargs) -> Union[Iterator[List[Message]], Iterator[List[Dict]]]:
@@ -185,6 +192,7 @@ class Agent(ABC):
         Returns:
             The output of tools.
         """
+        self.total_tool_calls += 1
         if tool_name not in self.function_map:
             return f'Tool {tool_name} does not exists.'
         tool = self.function_map[tool_name]
@@ -202,6 +210,8 @@ class Agent(ABC):
             logger.warning(error_message)
             return error_message
 
+        if tool_result[:5] == "error":
+            self.tool_call_errors += 1
         if isinstance(tool_result, str):
             return tool_result
         elif isinstance(tool_result, list) and all(isinstance(item, ContentItem) for item in tool_result):

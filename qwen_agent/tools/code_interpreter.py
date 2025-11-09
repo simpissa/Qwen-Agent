@@ -114,6 +114,13 @@ class CodeInterpreter(BaseToolWithFileAccess):
         if not code.strip():
             return ''
 
+        import re
+        def fix_code(code: str):
+            match = re.search(r'```(?:python|py)(.*?)```', code, re.DOTALL)
+            code = match.group(1) if match else code
+            return code.encode('utf-8').decode('unicode_escape').strip()
+        code = fix_code(code)
+
         kernel_id: str = f'{self.instance_id}_{os.getpid()}'
         if kernel_id in _KERNEL_CLIENTS:
             kc = _KERNEL_CLIENTS[kernel_id]
@@ -131,6 +138,7 @@ class CodeInterpreter(BaseToolWithFileAccess):
 
         if timeout:
             code = f'_M6CountdownTimer.start({timeout})\n{code}'
+            # print(code)
 
         fixed_code = []
         for line in code.split('\n'):
@@ -193,7 +201,7 @@ class CodeInterpreter(BaseToolWithFileAccess):
             ],
             cwd=os.path.abspath(self.work_dir),
         )
-        logger.info(f"INFO: kernel process's PID = {kernel_process.pid}")
+        # logger.info(f"INFO: kernel process's PID = {kernel_process.pid}")
 
         # Wait for kernel connection file to be written
         while True:
